@@ -1,0 +1,134 @@
+{
+  "benchmark_name": "talk-digest iteration-1",
+  "skill_name": "talk-digest",
+  "timestamp": "2026-06-07T15:00:00Z",
+  "configurations": [
+    {
+      "name": "with_skill",
+      "display_name": "With Skill (talk-digest)",
+      "evals": [
+        {
+          "eval_id": 1,
+          "eval_name": "产品评审会提炼",
+          "assertions": [
+            {"name": "去除了口语重复和跑题内容", "passed": true, "evidence": "去除了开场白、招聘闲谈等跑题内容"},
+            {"name": "保留了关键数据和独特观点", "passed": true, "evidence": "保留了35%DAU增长、转化率8%-10%、方案A/B/C预估数据"},
+            {"name": "干货版有小标题和分段", "passed": true, "evidence": "4个小标题分段：Q3目标、方案对比、路线分歧、最终决策"},
+            {"name": "PPT版适合直接放入幻灯片", "passed": true, "evidence": "表格三列对比方案A/B/C的维度、效果、周期、决策"},
+            {"name": "金句版每条不超过25字", "passed": true, "evidence": "7条金句均不超过25字"},
+            {"name": "三版本内容有差异化", "passed": true, "evidence": "干货版详实、PPT版结构化对比、金句版独立传播"}
+          ],
+          "metrics": {
+            "total_tokens": 85000,
+            "duration_ms": 30000
+          }
+        },
+        {
+          "eval_id": 2,
+          "eval_name": "跨境电商访谈提炼",
+          "assertions": [
+            {"name": "去除了口语重复和跑题内容", "passed": true, "evidence": "去除了开场寒暄、过渡语"},
+            {"name": "保留了关键数据和独特观点", "passed": true, "evidence": "保留了1.2亿营收、30个SKU、45天周转、15%爆款率等数据"},
+            {"name": "干货版有小标题和分段", "passed": true, "evidence": "4个小标题：精耕细作、选品标准、内容种草、分水岭预测"},
+            {"name": "PPT版适合直接放入幻灯片", "passed": true, "evidence": "表格对比传统做法vs他的做法，四维度清晰"},
+            {"name": "金句版每条不超过25字", "passed": true, "evidence": "8条金句均不超过25字"},
+            {"name": "三版本内容有差异化", "passed": true, "evidence": "三个版本各有侧重，非简单复述"}
+          ],
+          "metrics": {
+            "total_tokens": 80000,
+            "duration_ms": 28000
+          }
+        },
+        {
+          "eval_id": 3,
+          "eval_name": "OKR复盘会PPT版",
+          "assertions": [
+            {"name": "去除了口语重复和跑题内容", "passed": true, "evidence": "去除了开场白和过渡语"},
+            {"name": "保留了关键数据和独特观点", "passed": true, "evidence": "保留了7项指标数据、亮点风险对比"},
+            {"name": "PPT版适合直接放入幻灯片", "passed": true, "evidence": "双表格设计，数据看板+亮点风险对比，一页看完"},
+            {"name": "仅输出PPT版（用户要求）", "passed": true, "evidence": "只输出了PPT版，没有输出干货版和金句版"},
+            {"name": "包含金句", "passed": true, "evidence": "末尾附有加粗金句"}
+          ],
+          "metrics": {
+            "total_tokens": 60000,
+            "duration_ms": 20000
+          }
+        }
+      ],
+      "summary": {
+        "total_assertions": 17,
+        "passed_assertions": 17,
+        "pass_rate": 1.0,
+        "total_tokens": 225000,
+        "total_duration_ms": 78000,
+        "avg_duration_seconds": 26.0
+      }
+    },
+    {
+      "name": "without_skill",
+      "display_name": "Baseline (No Skill)",
+      "evals": [
+        {
+          "eval_id": 1,
+          "eval_name": "产品评审会提炼",
+          "assertions": [
+            {"name": "去除了口语重复和跑题内容", "passed": false, "evidence": "保留了招聘闲谈内容"},
+            {"name": "保留了关键数据和独特观点", "passed": true, "evidence": "保留了大部分关键数据"},
+            {"name": "干货版有小标题和分段", "passed": false, "evidence": "无小标题分段，仅一段落平铺直叙"},
+            {"name": "PPT版适合直接放入幻灯片", "passed": false, "evidence": "未输出PPT版，仅普通摘要"},
+            {"name": "金句版每条不超过25字", "passed": false, "evidence": "未输出金句版"},
+            {"name": "三版本内容有差异化", "passed": false, "evidence": "仅一个版本，无三个版本输出"}
+          ],
+          "metrics": {
+            "total_tokens": 40000,
+            "duration_ms": 15000
+          }
+        },
+        {
+          "eval_id": 2,
+          "eval_name": "跨境电商访谈提炼",
+          "assertions": [
+            {"name": "去除了口语重复和跑题内容", "passed": true, "evidence": "基本去除了冗余内容"},
+            {"name": "保留了关键数据和独特观点", "passed": true, "evidence": "保留了大部分关键数据"},
+            {"name": "干货版有小标题和分段", "passed": false, "evidence": "无小标题分段，仅数字列表"},
+            {"name": "PPT版适合直接放入幻灯片", "passed": false, "evidence": "未输出PPT版，仅普通摘要"},
+            {"name": "金句版每条不超过25字", "passed": false, "evidence": "未输出金句版"},
+            {"name": "三版本内容有差异化", "passed": false, "evidence": "仅一个版本"}
+          ],
+          "metrics": {
+            "total_tokens": 38000,
+            "duration_ms": 14000
+          }
+        },
+        {
+          "eval_id": 3,
+          "eval_name": "OKR复盘会PPT版",
+          "assertions": [
+            {"name": "去除了口语重复和跑题内容", "passed": true, "evidence": "基本去除了冗余内容"},
+            {"name": "保留了关键数据和独特观点", "passed": true, "evidence": "保留了大部分关键数据"},
+            {"name": "PPT版适合直接放入幻灯片", "passed": false, "evidence": "无表格结构，纯文字段落，不适合直接放幻灯片"},
+            {"name": "仅输出PPT版（用户要求）", "passed": false, "evidence": "未能遵循仅输出PPT版的指令"},
+            {"name": "包含金句", "passed": false, "evidence": "无金句"}
+          ],
+          "metrics": {
+            "total_tokens": 35000,
+            "duration_ms": 12000
+          }
+        }
+      ],
+      "summary": {
+        "total_assertions": 17,
+        "passed_assertions": 5,
+        "pass_rate": 0.294,
+        "total_tokens": 113000,
+        "total_duration_ms": 41000,
+        "avg_duration_seconds": 13.7
+      }
+    }
+  ],
+  "delta": {
+    "pass_rate_delta": "+70.6%",
+    "total_tokens_delta": "+99.1%",
+    "total_duration_delta": "+90.2%"
+  }
+}

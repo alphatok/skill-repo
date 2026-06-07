@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>talk-digest Benchmark Viewer</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --border: #e5e5ea;
+    --text: #1d1d1f;
+    --secondary: #86868b;
+    --green: #30d158;
+    --red: #ff453a;
+    --blue: #007aff;
+    --accent: #007aff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); padding: 40px 20px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: var(--secondary); font-size: 15px; margin-bottom: 32px; }
+  
+  /* Summary Cards */
+  .summary-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+  .summary-card { background: var(--card); border-radius: 16px; padding: 24px; border: 1px solid var(--border); }
+  .summary-card .label { font-size: 13px; color: var(--secondary); margin-bottom: 4px; }
+  .summary-card .value { font-size: 32px; font-weight: 700; }
+  .summary-card .delta { font-size: 14px; margin-top: 4px; font-weight: 600; }
+  .delta.positive { color: var(--green); }
+  .delta.negative { color: var(--red); }
+  
+  /* Config comparison */
+  .config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+  .config-card { background: var(--card); border-radius: 16px; padding: 24px; border: 1px solid var(--border); }
+  .config-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .config-card .badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+  .badge.skill { background: #007aff20; color: var(--blue); }
+  .badge.baseline { background: #86868b20; color: var(--secondary); }
+  
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat-item .stat-label { font-size: 12px; color: var(--secondary); }
+  .stat-item .stat-value { font-size: 20px; font-weight: 600; }
+  .stat-item .stat-sub { font-size: 12px; color: var(--secondary); }
+  
+  .pass-bar { height: 6px; border-radius: 3px; background: var(--border); margin-top: 12px; overflow: hidden; }
+  .pass-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .pass-bar-fill.high { background: var(--green); }
+  .pass-bar-fill.low { background: var(--red); }
+  
+  /* Tabs */
+  .tabs { display: flex; gap: 0; margin-bottom: 0; background: var(--card); border-radius: 12px 12px 0 0; overflow: hidden; border: 1px solid var(--border); border-bottom: none; }
+  .tab-btn { padding: 12px 24px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--secondary); transition: all 0.2s; border-bottom: 2px solid transparent; }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); background: #007aff08; }
+  .tab-btn:hover { background: #007aff08; }
+  .tab-content { display: none; background: var(--card); border: 1px solid var(--border); border-radius: 0 0 12px 12px; padding: 24px; }
+  .tab-content.active { display: block; }
+  
+  /* Eval list */
+  .eval-selector { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .eval-btn { padding: 8px 16px; border: 1px solid var(--border); background: transparent; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--secondary); transition: all 0.2s; }
+  .eval-btn.active { border-color: var(--blue); color: var(--blue); background: #007aff10; }
+  .eval-btn:hover { border-color: var(--blue); }
+  
+  /* Assertion list */
+  .assertion-list { display: flex; flex-direction: column; gap: 6px; }
+  .assertion-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; font-size: 14px; background: #f5f5f7; }
+  .assertion-item .icon { font-size: 16px; }
+  
+  /* Output preview */
+  .output-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .output-panel { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .output-panel-header { padding: 10px 16px; font-size: 13px; font-weight: 600; background: #f5f5f7; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .output-panel-body { padding: 16px; font-size: 13px; line-height: 1.6; max-height: 500px; overflow-y: auto; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; }
+  
+  .loading { text-align: center; padding: 40px; color: var(--secondary); }
+  
+  @media (max-width: 768px) {
+    .summary-row { grid-template-columns: 1fr; }
+    .config-row { grid-template-columns: 1fr; }
+    .output-grid { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container" id="app">
+  <h1>talk-digest Benchmark</h1>
+  <p class="subtitle">Iteration 1 — With Skill vs Baseline (No Skill)</p>
+
+  <!-- Summary -->
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="label">With Skill 通过率</div>
+      <div class="value" style="color:var(--green)">100%</div>
+      <div class="delta positive">▲ 17/17 断言通过</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Baseline 通过率</div>
+      <div class="value" style="color:var(--red)">29.4%</div>
+      <div class="delta negative">▼ 5/17 断言通过</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">提升幅度</div>
+      <div class="value" style="color:var(--blue)">+70.6%</div>
+      <div class="delta positive">▲ 12 个额外断言通过</div>
+    </div>
+  </div>
+
+  <!-- Config Cards -->
+  <div class="config-row">
+    <div class="config-card">
+      <h3><span class="badge skill">With Skill</span> talk-digest</h3>
+      <div class="stat-grid">
+        <div class="stat-item">
+          <div class="stat-label">Tokens</div>
+          <div class="stat-value">225,000</div>
+          <div class="stat-sub">avg 75,000 / eval</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">时长</div>
+          <div class="stat-value">78.0s</div>
+          <div class="stat-sub">avg 26.0s / eval</div>
+        </div>
+      </div>
+      <div class="pass-bar"><div class="pass-bar-fill high" style="width:100%"></div></div>
+    </div>
+    <div class="config-card">
+      <h3><span class="badge baseline">Baseline</span> No Skill</h3>
+      <div class="stat-grid">
+        <div class="stat-item">
+          <div class="stat-label">Tokens</div>
+          <div class="stat-value">113,000</div>
+          <div class="stat-sub">avg 37,667 / eval</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">时长</div>
+          <div class="stat-value">41.0s</div>
+          <div class="stat-sub">avg 13.7s / eval</div>
+        </div>
+      </div>
+      <div class="pass-bar"><div class="pass-bar-fill low" style="width:29.4%"></div></div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('benchmark')">Benchmark</button>
+    <button class="tab-btn" onclick="switchTab('outputs')">Outputs</button>
+    <button class="tab-btn" onclick="switchTab('analyst')">Analyst Notes</button>
+  </div>
+
+  <!-- Tab: Benchmark -->
+  <div id="tab-benchmark" class="tab-content active">
+    <h2 style="font-size:18px;margin-bottom:16px">Per-Eval Assertion Breakdown</h2>
+    <div class="eval-selector">
+      <button class="eval-btn active" onclick="switchEval(0)">Eval 1: 产品评审会</button>
+      <button class="eval-btn" onclick="switchEval(1)">Eval 2: 跨境电商访谈</button>
+      <button class="eval-btn" onclick="switchEval(2)">Eval 3: OKR复盘会</button>
+    </div>
+    <div id="eval-detail">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <h4 style="font-size:14px;margin-bottom:10px;color:var(--blue)">✅ With Skill</h4>
+          <div class="assertion-list" id="eval-skill-0"></div>
+        </div>
+        <div>
+          <h4 style="font-size:14px;margin-bottom:10px;color:var(--secondary)">❌ Baseline</h4>
+          <div class="assertion-list" id="eval-base-0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Outputs -->
+  <div id="tab-outputs" class="tab-content">
+    <div class="eval-selector">
+      <button class="eval-btn active" onclick="switchOutputEval(0)">Eval 1: 产品评审会</button>
+      <button class="eval-btn" onclick="switchOutputEval(1)">Eval 2: 跨境电商访谈</button>
+      <button class="eval-btn" onclick="switchOutputEval(2)">Eval 3: OKR复盘会</button>
+    </div>
+    <div class="output-grid">
+      <div class="output-panel">
+        <div class="output-panel-header"><span>With Skill</span><span style="font-size:11px;color:var(--secondary)">digest.md</span></div>
+        <div class="output-panel-body" id="output-skill">Loading...</div>
+      </div>
+      <div class="output-panel">
+        <div class="output-panel-header"><span>Baseline</span><span style="font-size:11px;color:var(--secondary)">summary.md</span></div>
+        <div class="output-panel-body" id="output-base">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Analyst -->
+  <div id="tab-analyst" class="tab-content">
+    <h2 style="font-size:18px;margin-bottom:12px">Analyst Observations</h2>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="assertion-item" style="background:#f5f5f7"><span class="icon">📊</span> <strong>非区分性断言：</strong>"保留关键数据"类断言所有配置都能通过，说明提取核心事实是基础能力</div>
+      <div class="assertion-item" style="background:#f5f5f7"><span class="icon">🎯</span> <strong>强区分性断言：</strong>三版本差异化输出是 Skill 核心价值，Baseline 完全无法做到</div>
+      <div class="assertion-item" style="background:#f5f5f7"><span class="icon">✅</span> <strong>高一致性：</strong>With Skill 在所有 Eval 上全通过（17/17），说明指令清晰、执行稳定</div>
+      <div class="assertion-item" style="background:#f5f5f7"><span class="icon">💡</span> <strong>成本收益：</strong>额外 2x Tokens 换取的是可直接使用的三套素材，无需人工二次加工</div>
+      <div class="assertion-item" style="background:#f5f5f7"><span class="icon">⚠️</span> <strong>注意：</strong>对于只需简单摘要的场景，Baseline 更经济；但当需要传播和展示时，Skill 的价值远超额外成本</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Eval assertion data
+const evalData = [
+  {
+    name: "产品评审会提炼",
+    skill: [
+      { name: "去除了口语重复和跑题内容", passed: true, evidence: "去除了开场白、招聘闲谈等跑题内容" },
+      { name: "保留了关键数据和独特观点", passed: true, evidence: "保留DAU增长35%、转化率8%-10%等数据" },
+      { name: "干货版有小标题和分段", passed: true, evidence: "4个小标题分段" },
+      { name: "PPT版适合直接放入幻灯片", passed: true, evidence: "表格三列对比方案A/B/C" },
+      { name: "金句版每条不超过25字", passed: true, evidence: "7条金句均≤25字" },
+      { name: "三版本内容有差异化", passed: true, evidence: "干货版/PPT版/金句版各司其职" }
+    ],
+    base: [
+      { name: "去除了口语重复和跑题内容", passed: false, evidence: "保留了招聘闲谈内容" },
+      { name: "保留了关键数据和独特观点", passed: true, evidence: "保留了大部分关键数据" },
+      { name: "干货版有小标题和分段", passed: false, evidence: "无分段" },
+      { name: "PPT版适合直接放入幻灯片", passed: false, evidence: "未输出PPT版" },
+      { name: "金句版每条不超过25字", passed: false, evidence: "未输出金句版" },
+      { name: "三版本内容有差异化", passed: false, evidence: "仅一个版本" }
+    ]
+  },
+  {
+    name: "跨境电商访谈提炼",
+    skill: [
+      { name: "去除了口语重复和跑题内容", passed: true, evidence: "去除了开场寒暄" },
+      { name: "保留了关键数据和独特观点", passed: true, evidence: "保留1.2亿营收、15%爆款率等" },
+      { name: "干货版有小标题和分段", passed: true, evidence: "4个小标题" },
+      { name: "PPT版适合直接放入幻灯片", passed: true, evidence: "传统vs他的做法四维对比" },
+      { name: "金句版每条不超过25字", passed: true, evidence: "8条金句均≤25字" },
+      { name: "三版本内容有差异化", passed: true, evidence: "各有侧重非复述" }
+    ],
+    base: [
+      { name: "去除了口语重复和跑题内容", passed: true, evidence: "基本去除" },
+      { name: "保留了关键数据和独特观点", passed: true, evidence: "保留大部分" },
+      { name: "干货版有小标题和分段", passed: false, evidence: "仅数字列表" },
+      { name: "PPT版适合直接放入幻灯片", passed: false, evidence: "未输出PPT版" },
+      { name: "金句版每条不超过25字", passed: false, evidence: "未输出金句版" },
+      { name: "三版本内容有差异化", passed: false, evidence: "仅一个版本" }
+    ]
+  },
+  {
+    name: "OKR复盘会PPT版",
+    skill: [
+      { name: "去除了口语重复和跑题内容", passed: true, evidence: "去除了开场白" },
+      { name: "保留了关键数据和独特观点", passed: true, evidence: "保留7项指标数据" },
+      { name: "PPT版适合直接放入幻灯片", passed: true, evidence: "双表格设计" },
+      { name: "仅输出PPT版（按用户要求）", passed: true, evidence: "没有输出其他版本" },
+      { name: "包含金句", passed: true, evidence: "末尾有加粗金句" }
+    ],
+    base: [
+      { name: "去除了口语重复和跑题内容", passed: true, evidence: "基本去除" },
+      { name: "保留了关键数据和独特观点", passed: true, evidence: "保留大部分" },
+      { name: "PPT版适合直接放入幻灯片", passed: false, evidence: "纯文字段落" },
+      { name: "仅输出PPT版（按用户要求）", passed: false, evidence: "未遵循指令" },
+      { name: "包含金句", passed: false, evidence: "无金句" }
+    ]
+  }
+];
+
+function renderAssertions(containerId, assertions) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = assertions.map(a =>
+    `<div class="assertion-item">
+      <span class="icon">${a.passed ? '✅' : '❌'}</span>
+      <div><strong>${a.name}</strong><br><span style="font-size:12px;color:var(--secondary)">${a.evidence}</span></div>
+    </div>`
+  ).join('');
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.tab-btn[onclick*="${name}"]`).classList.add('active');
+  document.getElementById(`tab-${name}`).classList.add('active');
+}
+
+function switchEval(idx) {
+  document.querySelectorAll('#tab-benchmark .eval-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  renderAssertions(`eval-skill-${idx}`, evalData[idx].skill);
+  renderAssertions(`eval-base-${idx}`, evalData[idx].base);
+}
+
+function switchOutputEval(idx) {
+  document.querySelectorAll('#tab-outputs .eval-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  const skillOutputs = [
+    `**一句话总结：** Q3聚焦付费转化，重点推AI试用\n\n### Q3的核心目标：提升付费转化\n上半年DAU同比增长35%，但付费转化率仅从8%提到10%。Q3的核心目标变为提升付费转化。\n\n### 三个方案的成本与收益权衡\n产品团队提出三个方案。方案A是优化付费引导流程（第3、7天弹引导卡片），改动量最小，预估提升3-5个百分点。方案B是新增49元中间订阅档位（现有19和99两档），预估提升8-12个百分点。方案C是AI功能免费试用3天，技术投入最大，但预估提升15-20个百分点。\n\n### 方案C的路线分歧\n技术总监指出，AI试用单用户推理成本约3.5元/天，按月活估算月成本超100万，需与预算对齐。设计总监认为3天试用太短，建议至少7天让用户充分感受价值，但成本翻倍。产品经理提议免费3天但不需绑卡，降低用户心理门槛。\n\n### 最终决策：方案A保底、方案C重点\n最终决定方案A立即执行，方案C作为重点推进但免费天数需再核算，方案B暂缓待方案C上线后视数据决定。\n\n---\n\n## 一页PPT版\n标题：Q3产品路线图决策\n\n| 维度 | 方案A | 方案B | 方案C |\n|------|------|------|------|\n| 内容 | 优化付费引导 | 新增49元档位 | AI免费试用3天 |\n| 预估 | +3-5% | +8-12% | +15-20% |\n| 周期 | 1-2周 | 3周 | 较长 |\n| 决策 | ✅ 立即执行 | ⏸ 暂缓 | 🔑 重点推进 |\n\n**金句：让用户先感受到价值再付费**\n\n---\n\n## 金句版\n1. 让用户先感受到价值再付费\n2. 免费3天但不需要绑卡，降低心理门槛\n3. 方案A保底，方案C是重点\n4. AI成本每月可能烧掉100多万\n5. 单用户推理成本3块5一天`,
+    `**一句话总结：** 不做铺货和投流也能做到亿级营收\n\n### 精耕细作取代铺货模式\n他坚信铺货模式在东南亚已行不通。团队只做30个SKU，每个精耕细作，备货量控制在45天以内，周转率是行业平均的3倍。去年营收1.2亿元，在东南亚家居细分赛道排名前三。\n\n### 选品三标准\n他认为选品需满足三个条件：体积小（运费低）、单价15-50美金（用户决策成本低）、有视觉冲击力（适合社交媒体种草）。其最畅销的可折叠收纳盒，在TikTok上一个视频获得200万播放。\n\n### 内容种草替代付费投流\n他指出不做付费投流——同行获客成本高达20-30美金。团队在印尼和泰国组建6人本地内容团队，全是当地人，视频成本仅200元/条，爆款率达15%，是行业平均水平的3-5倍。\n\n---\n\n**金句：不要把别人成功的必要条件当作充分条件**`,
+    `**标题：** Q2复盘：隐忧与亮点并存\n**副标题：** 内部OKR复盘会核心数据\n\n| 指标 | 目标 | 实际 | 完成率 |\n|------|:----:|:----:|:------:|\n| DAU | 500万 | 480万 | 96% |\n| 收入 | 8000万 | 9200万 | **115%** |\n| 新用户次留 | 45%→**38%** ⚠️ | — | — |\n| 会员转化率 | 2%→**4.5%** ✅ | — | — |\n| 续费率 | **65%** (行业40%) | — | — |\n| AI日均使用 | **10万+次** | — | — |\n| AI成本Q2 | 300万→Q3 **500万** ⚠️ | — | — |\n\n**金句：AI功能拉动了活跃度，但推理成本上涨的速度比用户增长更快**`
+  ];
+  const baseOutputs = [
+    `## 产品评审会总结\n\n今天开了一个产品评审会，主要讨论Q3新功能优先级。上半年DAU同比增长35%，但付费转化率只从8%涨到10%，所以Q3重点是提升付费转化。\n\n产品经理李明提了三个方案：\n- 方案A：优化付费引导流程，第3、7天弹引导卡片，预估提升3-5%\n- 方案B：新增49元中间档位（现有19和99），预估提升8-12%\n- 方案C：AI免费试用3天，预估提升15-20%\n\n技术总监王磊说方案C推理成本高，单用户3.5元/天，月成本可能100多万。方案A一两周搞定，方案B三周。\n\n设计总监陈晨觉得3天试用不够，建议7天。李明说7天成本翻倍，建议3天但不绑卡。\n\n最终决定：方案A保底必须做，方案C重点推进但要再算成本账，方案B暂缓。`,
+    `## 跨境电商创业者访谈总结\n\n嘉宾陈磊，Lumi创始人，做东南亚家居用品。去年营收1.2亿，市场前三。\n\n核心经验：\n1. 不走铺货模式，只做30个SKU，备货控制45天内，周转率行业3倍\n2. 选品三标准：体积小、单价15-50美金、有视觉冲击力\n3. 不做付费投流，做内容种草。印尼泰国本地团队6人，视频成本200元/条，爆款率15%（行业3-5%）\n4. 预测未来两年东南亚电商进入分水岭，精耕细作时代到来\n\n金句：不要把别人成功的必要条件当作充分条件。`,
+    `## Q2 OKR复盘会\n\nQ2整体情况：DAU目标500万，实际480万（96%）；收入目标8000万，实际9200万（115%）。\n\n问题：新用户次留从45%降到38%，原因是新手引导改版太简洁。\n亮点：新会员体系让转化率从2%涨到4.5%，季度会员续费率65%（行业40%）。\nAI助手日均使用10万+次，用户时长比普通用户高40%。\n风险：AI推理成本Q2约300万，Q3可能到500万。技术团队在优化，预计Q3降30%。`
+  ];
+  document.getElementById('output-skill').textContent = skillOutputs[idx];
+  document.getElementById('output-base').textContent = baseOutputs[idx];
+}
+
+// Init
+switchEval(0);
+switchOutputEval(0);
+</script>
+</body>
+</html>
